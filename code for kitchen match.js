@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+// import React, { useState, useMemo } from "react";
 
 // --- INGREDIENTS DATA ---
 const PANTRY_CATEGORIES = {
@@ -673,3 +673,4 @@ const styles = {
     color: "#223028",
     borderRadius: 12,
     padding: 2
+  
