@@ -1,0 +1,564 @@
+import React, { useState, useMemo } from "react";
+
+const FONTS = `
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap');
+`;
+
+const INDIAN_NAMES = {
+  "onion": "pyaz", "garlic": "lahsun", "tomato": "tamatar", "bell pepper": "shimla mirch",
+  "spinach": "palak", "carrot": "gajar", "potato": "aloo", "lemon": "nimbu", "cilantro": "dhania",
+  "mushroom": "khumb", "ginger": "adrak", "cauliflower": "gobi", "peas": "matar",
+  "eggs": "anda", "shrimp": "jhinga", "chickpeas": "chana", "paneer": "paneer", "lentils": "dal",
+  "rice": "chawal", "oats": "jai",
+  "butter": "makhan", "milk": "doodh", "greek yogurt": "dahi", "cream": "malai",
+  "olive oil": "tel", "canned tomatoes": "tamatar", "coconut milk": "nariyal ka doodh",
+  "cumin": "jeera", "honey": "shahad", "garam masala": "garam masala",
+};
+
+function withIndianName(item) {
+  return INDIAN_NAMES[item] ? `${item} (${INDIAN_NAMES[item]})` : item;
+}
+
+const INGREDIENT_GROUPS = [
+  { label: "Produce", items: ["onion", "garlic", "tomato", "bell pepper", "spinach", "carrot", "potato", "lemon", "cilantro", "avocado", "mushroom", "zucchini", "ginger", "cauliflower", "peas"] },
+  { label: "Protein", items: ["chicken breast", "ground beef", "eggs", "shrimp", "chickpeas", "tofu", "black beans", "bacon", "paneer", "lentils"] },
+  { label: "Grains & pasta", items: ["rice", "pasta", "bread", "tortillas", "quinoa", "oats"] },
+  { label: "Dairy", items: ["butter", "milk", "parmesan", "mozzarella", "greek yogurt", "cream"] },
+  { label: "Pantry", items: ["olive oil", "soy sauce", "canned tomatoes", "coconut milk", "curry powder", "cumin", "honey", "vegetable broth", "garam masala"] },
+];
+
+const RECIPES = [
+  {
+    id: "r1", name: "Weeknight chicken stir-fry", cuisine: "Asian", diet: "none", time: 25, meal: "Dinner",
+    ingredients: [["chicken breast", "1 lb"], ["bell pepper", "2"], ["carrot", "1"], ["soy sauce", "3 tbsp"], ["garlic", "3 cloves"], ["rice", "1 cup"]],
+    steps: ["Cook rice according to package directions.", "Slice chicken breast into thin strips and sear in a hot pan until browned.", "Add sliced bell pepper, carrot, and minced garlic; stir-fry 4 minutes.", "Pour in soy sauce, toss to coat, and cook 2 more minutes.", "Serve over the rice."],
+  },
+  {
+    id: "r2", name: "Chickpea and spinach curry", cuisine: "Indian", diet: "vegan", time: 30, meal: "Dinner",
+    ingredients: [["chickpeas", "2 cans"], ["spinach", "3 cups"], ["coconut milk", "1 can"], ["onion", "1"], ["curry powder", "2 tbsp"], ["garlic", "2 cloves"]],
+    steps: ["Sauté diced onion and garlic until soft.", "Stir in curry powder and cook 1 minute until fragrant.", "Add chickpeas and coconut milk; simmer 15 minutes.", "Fold in spinach until wilted.", "Serve with rice or bread."],
+  },
+  {
+    id: "r3", name: "Classic tomato basil pasta", cuisine: "Italian", diet: "vegetarian", time: 20, meal: "Dinner",
+    ingredients: [["pasta", "12 oz"], ["canned tomatoes", "1 can"], ["garlic", "3 cloves"], ["olive oil", "3 tbsp"], ["parmesan", "1/2 cup"]],
+    steps: ["Boil pasta until al dente.", "Sauté garlic in olive oil until golden.", "Add canned tomatoes, crush with a spoon, and simmer 10 minutes.", "Toss pasta with sauce and top with parmesan."],
+  },
+  {
+    id: "r4", name: "Beef and black bean tacos", cuisine: "Mexican", diet: "none", time: 25, meal: "Dinner",
+    ingredients: [["ground beef", "1 lb"], ["black beans", "1 can"], ["tortillas", "8"], ["onion", "1"], ["cilantro", "1/4 cup"], ["avocado", "1"]],
+    steps: ["Brown ground beef with diced onion.", "Stir in black beans and warm through.", "Warm tortillas and fill with the beef mixture.", "Top with cilantro and sliced avocado."],
+  },
+  {
+    id: "r5", name: "Greek yogurt veggie bowl", cuisine: "Mediterranean", diet: "vegetarian", time: 15, meal: "Lunch",
+    ingredients: [["greek yogurt", "1 cup"], ["tomato", "1"], ["cucumber", "1"], ["chickpeas", "1 can"], ["lemon", "1"], ["olive oil", "2 tbsp"]],
+    steps: ["Spread greek yogurt on a plate or in a bowl.", "Top with diced tomato, cucumber, and chickpeas.", "Drizzle with lemon juice and olive oil."],
+  },
+  {
+    id: "r6", name: "Shrimp and zucchini scampi", cuisine: "Italian", diet: "none", time: 20, meal: "Dinner",
+    ingredients: [["shrimp", "1 lb"], ["zucchini", "2"], ["garlic", "4 cloves"], ["butter", "3 tbsp"], ["pasta", "8 oz"], ["lemon", "1"]],
+    steps: ["Cook pasta until al dente.", "Sauté garlic in butter, then add shrimp and cook until pink.", "Add sliced zucchini and cook 3 minutes.", "Toss with pasta and a squeeze of lemon."],
+  },
+  {
+    id: "r7", name: "Loaded veggie omelet", cuisine: "American", diet: "vegetarian", time: 15, meal: "Breakfast",
+    ingredients: [["eggs", "3"], ["spinach", "1 cup"], ["mushroom", "1/2 cup"], ["mozzarella", "1/4 cup"], ["butter", "1 tbsp"]],
+    steps: ["Whisk eggs with a pinch of salt.", "Melt butter in a pan and sauté mushroom and spinach.", "Pour in eggs, let set, then sprinkle mozzarella over half.", "Fold and cook until just set."],
+  },
+  {
+    id: "r8", name: "Tofu and vegetable fried rice", cuisine: "Asian", diet: "vegan", time: 20, meal: "Dinner",
+    ingredients: [["tofu", "14 oz"], ["rice", "3 cups cooked"], ["carrot", "1"], ["onion", "1"], ["soy sauce", "3 tbsp"], ["garlic", "2 cloves"]],
+    steps: ["Press and cube tofu, then pan-fry until golden.", "Add diced onion, carrot, and garlic; cook until soft.", "Stir in cooked rice and soy sauce.", "Toss until heated through and lightly crisped."],
+  },
+  {
+    id: "r9", name: "Overnight oats with honey", cuisine: "American", diet: "vegetarian", time: 10, meal: "Breakfast",
+    ingredients: [["oats", "1 cup"], ["milk", "1 cup"], ["greek yogurt", "1/2 cup"], ["honey", "2 tbsp"]],
+    steps: ["Stir oats, milk, and greek yogurt together in a jar.", "Sweeten with honey and mix well.", "Refrigerate overnight and enjoy cold."],
+  },
+  {
+    id: "r10", name: "Loaded potato and bacon skillet", cuisine: "American", diet: "none", time: 30, meal: "Dinner",
+    ingredients: [["potato", "4"], ["bacon", "4 strips"], ["onion", "1"], ["eggs", "2"], ["parmesan", "1/4 cup"]],
+    steps: ["Dice and pan-fry potatoes until crisp, about 15 minutes.", "Cook bacon separately, then crumble.", "Add onion to the potatoes and cook until soft.", "Crack eggs over the top, cover, and cook until set.", "Finish with crumbled bacon and parmesan."],
+  },
+  {
+    id: "r11", name: "Quinoa and roasted vegetable bowl", cuisine: "Mediterranean", diet: "vegan", time: 35, meal: "Lunch",
+    ingredients: [["quinoa", "1 cup"], ["zucchini", "1"], ["bell pepper", "1"], ["chickpeas", "1 can"], ["olive oil", "3 tbsp"], ["lemon", "1"]],
+    steps: ["Cook quinoa according to package directions.", "Toss chopped zucchini and bell pepper with olive oil and roast at 425°F for 20 minutes.", "Warm chickpeas.", "Combine everything and finish with lemon juice."],
+  },
+  {
+    id: "r12", name: "Creamy tomato soup", cuisine: "American", diet: "vegetarian", time: 25, meal: "Lunch",
+    ingredients: [["canned tomatoes", "2 cans"], ["onion", "1"], ["garlic", "2 cloves"], ["cream", "1/2 cup"], ["vegetable broth", "2 cups"], ["butter", "2 tbsp"]],
+    steps: ["Sauté onion and garlic in butter until soft.", "Add canned tomatoes and vegetable broth; simmer 15 minutes.", "Blend until smooth.", "Stir in cream and warm through."],
+  },
+  {
+    id: "r13", name: "Spicy black bean quesadillas", cuisine: "Mexican", diet: "vegetarian", time: 15, meal: "Lunch",
+    ingredients: [["black beans", "1 can"], ["tortillas", "4"], ["mozzarella", "1 cup"], ["tomato", "1"], ["cilantro", "1/4 cup"]],
+    steps: ["Mash black beans lightly with a fork.", "Spread onto tortillas with cheese, diced tomato, and cilantro.", "Fold and cook in a dry pan until golden and cheese melts."],
+  },
+  {
+    id: "r14", name: "Coconut curry shrimp", cuisine: "Indian", diet: "none", time: 25, meal: "Dinner",
+    ingredients: [["shrimp", "1 lb"], ["coconut milk", "1 can"], ["curry powder", "2 tbsp"], ["onion", "1"], ["spinach", "2 cups"], ["rice", "1 cup"]],
+    steps: ["Cook rice according to package directions.", "Sauté onion, then stir in curry powder.", "Add coconut milk and simmer 5 minutes.", "Add shrimp and spinach; cook until shrimp is pink.", "Serve over rice."],
+  },
+];
+
+const INDIAN_RECIPES = [
+  {
+    id: "r15", name: "Butter chicken (murgh makhani)", cuisine: "Indian", diet: "none", time: 40, meal: "Dinner",
+    ingredients: [["chicken breast", "1.5 lb"], ["butter", "4 tbsp"], ["canned tomatoes", "1 can"], ["cream", "1/2 cup"], ["garlic", "4 cloves"], ["ginger", "1 tbsp"], ["garam masala", "2 tsp"]],
+    steps: ["Sear cubed chicken in butter until browned; set aside.", "In the same pan, sauté garlic and ginger, then add canned tomatoes and garam masala.", "Simmer 10 minutes and blend until smooth.", "Return chicken to the pan, stir in cream, and simmer until cooked through.", "Serve with rice or bread."],
+  },
+  {
+    id: "r16", name: "Palak paneer", cuisine: "Indian", diet: "vegetarian", time: 30, meal: "Dinner",
+    ingredients: [["spinach", "4 cups"], ["paneer", "14 oz"], ["onion", "1"], ["garlic", "3 cloves"], ["ginger", "1 tbsp"], ["cream", "2 tbsp"]],
+    steps: ["Blanch spinach briefly, then blend into a smooth purée.", "Sauté diced onion, garlic, and ginger until soft.", "Stir in the spinach purée and simmer 5 minutes.", "Add cubed paneer and warm through.", "Finish with a swirl of cream."],
+  },
+  {
+    id: "r17", name: "Chana masala", cuisine: "Indian", diet: "vegan", time: 30, meal: "Dinner",
+    ingredients: [["chickpeas", "2 cans"], ["onion", "1"], ["tomato", "2"], ["garlic", "3 cloves"], ["ginger", "1 tbsp"], ["garam masala", "2 tsp"]],
+    steps: ["Sauté onion, garlic, and ginger until golden.", "Add chopped tomato and garam masala; cook until the tomato breaks down.", "Stir in chickpeas and a splash of water; simmer 15 minutes.", "Lightly mash a few chickpeas to thicken the sauce.", "Serve with rice or bread."],
+  },
+  {
+    id: "r18", name: "Dal tadka", cuisine: "Indian", diet: "vegetarian", time: 35, meal: "Dinner",
+    ingredients: [["lentils", "1 cup"], ["onion", "1"], ["tomato", "1"], ["garlic", "3 cloves"], ["cumin", "1 tsp"], ["butter", "2 tbsp"]],
+    steps: ["Boil lentils in water until soft, about 20 minutes.", "In a small pan, sizzle cumin and garlic in butter until fragrant (the tadka).", "Add onion and tomato to the tadka and cook until soft.", "Stir the tadka into the cooked lentils.", "Simmer a few minutes to combine and serve."],
+  },
+  {
+    id: "r19", name: "Vegetable pulao", cuisine: "Indian", diet: "vegan", time: 30, meal: "Lunch",
+    ingredients: [["rice", "2 cups"], ["carrot", "1"], ["peas", "1 cup"], ["onion", "1"], ["garlic", "2 cloves"], ["cumin", "1 tsp"]],
+    steps: ["Sauté cumin, onion, and garlic in a large pot until soft.", "Add diced carrot and peas; cook 3 minutes.", "Stir in rice, then add water and bring to a boil.", "Cover and simmer until the rice is fluffy and water is absorbed."],
+  },
+  {
+    id: "r20", name: "Egg curry", cuisine: "Indian", diet: "none", time: 30, meal: "Dinner",
+    ingredients: [["eggs", "6"], ["onion", "1"], ["tomato", "2"], ["garlic", "3 cloves"], ["ginger", "1 tbsp"], ["garam masala", "2 tsp"]],
+    steps: ["Boil eggs, peel, and set aside.", "Sauté onion, garlic, and ginger until golden.", "Add chopped tomato and garam masala; cook into a thick sauce.", "Add the boiled eggs and simmer 10 minutes so they soak up the sauce.", "Serve with rice or bread."],
+  },
+  {
+    id: "r21", name: "Aloo gobi", cuisine: "Indian", diet: "vegan", time: 30, meal: "Lunch",
+    ingredients: [["potato", "3"], ["cauliflower", "1 head"], ["cumin", "1 tsp"], ["garlic", "2 cloves"], ["ginger", "1 tsp"]],
+    steps: ["Sizzle cumin, garlic, and ginger in oil until fragrant.", "Add cubed potato and cauliflower florets.", "Cover and cook over medium-low heat, stirring occasionally, until tender.", "Season and serve with roti or rice."],
+  },
+];
+
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const ALL_RECIPES = [...RECIPES, ...INDIAN_RECIPES];
+const CUISINES = ["All", ...Array.from(new Set(ALL_RECIPES.map(r => r.cuisine)))];
+const DIETS = ["All", "vegetarian", "vegan", "none"];
+
+const DISH_TYPE_BY_ID = {
+  r1: "rice", r2: "curry", r3: "pasta", r4: "taco", r5: "bowl", r6: "pasta", r7: "egg",
+  r8: "rice", r9: "bowl", r10: "egg", r11: "bowl", r12: "soup", r13: "taco", r14: "curry",
+  r15: "curry", r16: "curry", r17: "curry", r18: "soup", r19: "rice", r20: "curry", r21: "bowl",
+};
+
+const GRAIN_BG = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E\")";
+
+function DishIcon({ type, size = 56 }) {
+  const plate = (
+    <>
+      <circle cx="40" cy="40" r="35" fill="#FAF6EC" stroke="#E3DCC0" strokeWidth="2" />
+      <circle cx="40" cy="40" r="28" fill="none" stroke="#EAE3CC" strokeWidth="1.4" />
+    </>
+  );
+  let food = null;
+  if (type === "curry") {
+    food = (
+      <>
+        <path d="M18 42 Q19 24 40 24 Q61 24 62 42 Q60 55 40 55 Q20 55 18 42 Z" fill="#C1522D" />
+        <path d="M24 38 Q40 30 56 38" stroke="#E3A72C" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+        <path d="M26 46 Q40 40 54 46" stroke="#8FAE8B" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.8" />
+        <circle cx="30" cy="30" r="1.6" fill="#8FAE8B" />
+        <circle cx="49" cy="31" r="1.6" fill="#8FAE8B" />
+      </>
+    );
+  } else if (type === "rice") {
+    food = (
+      <>
+        <ellipse cx="40" cy="43" rx="21" ry="13" fill="#F2ECDD" />
+        {[[26,38],[31,35],[37,40],[44,36],[50,41],[33,46],[47,47],[40,33],[24,44],[54,45]].map(([x,y],i) => (
+          <ellipse key={i} cx={x} cy={y} rx="2.6" ry="1.4" fill="#E9E0C4" stroke="#D8CFAF" strokeWidth="0.5" transform={`rotate(${(i*37)%180} ${x} ${y})`} />
+        ))}
+        <circle cx="46" cy="34" r="2" fill="#8FAE8B" />
+        <circle cx="30" cy="49" r="2" fill="#C1522D" />
+      </>
+    );
+  } else if (type === "pasta") {
+    food = (
+      <>
+        <path d="M20 44 Q28 26 40 34 Q52 42 60 26" stroke="#E3A72C" strokeWidth="4" fill="none" strokeLinecap="round" />
+        <path d="M22 38 Q32 48 42 40 Q52 32 58 42" stroke="#DFA23A" strokeWidth="4" fill="none" strokeLinecap="round" />
+        <path d="M24 50 Q34 40 44 48 Q52 54 56 48" stroke="#EAB24E" strokeWidth="4" fill="none" strokeLinecap="round" />
+        <circle cx="35" cy="30" r="2" fill="#C1522D" />
+        <circle cx="47" cy="49" r="2" fill="#7C9473" />
+      </>
+    );
+  } else if (type === "taco") {
+    food = (
+      <>
+        <path d="M16 44 Q40 20 64 44 Q40 40 16 44 Z" fill="#E3A72C" />
+        <path d="M20 43 Q40 30 60 43" stroke="#8FAE8B" strokeWidth="3" fill="none" strokeLinecap="round" />
+        <path d="M22 47 Q40 38 58 47" stroke="#C1522D" strokeWidth="3" fill="none" strokeLinecap="round" />
+        <circle cx="30" cy="40" r="1.6" fill="#FAF6EC" />
+        <circle cx="48" cy="39" r="1.6" fill="#FAF6EC" />
+      </>
+    );
+  } else if (type === "bowl") {
+    food = (
+      <>
+        <path d="M20 40 Q20 56 40 56 Q60 56 60 40 Z" fill="#7C9473" />
+        <ellipse cx="40" cy="40" rx="20" ry="7" fill="#8FAE8B" />
+        <circle cx="32" cy="40" r="2.2" fill="#FAF6EC" />
+        <circle cx="46" cy="41" r="2.2" fill="#E3A72C" />
+        <circle cx="39" cy="37" r="2" fill="#C1522D" />
+      </>
+    );
+  } else if (type === "egg") {
+    food = (
+      <>
+        <ellipse cx="40" cy="42" rx="21" ry="14" fill="#FAF6EC" stroke="#EAE3CC" />
+        <circle cx="40" cy="42" r="9" fill="#E3A72C" />
+        <circle cx="37" cy="39" r="2.2" fill="#F3C670" opacity="0.8" />
+      </>
+    );
+  } else if (type === "soup") {
+    food = (
+      <>
+        <path d="M19 40 Q19 55 40 55 Q61 55 61 40 Z" fill="#C1522D" />
+        <path d="M27 40 Q40 34 53 40" stroke="#E3A72C" strokeWidth="2.4" fill="none" strokeLinecap="round" />
+        <path d="M30 22 Q27 27 30 30 Q33 33 30 37" stroke="#C9C2AC" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.8" />
+        <path d="M40 20 Q37 25 40 28 Q43 31 40 35" stroke="#C9C2AC" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.8" />
+        <path d="M50 22 Q47 27 50 30 Q53 33 50 37" stroke="#C9C2AC" strokeWidth="2" fill="none" strokeLinecap="round" opacity="0.8" />
+      </>
+    );
+  }
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" style={{ display: "block" }}>
+      {plate}
+      {food}
+    </svg>
+  );
+}
+
+function BackgroundArt() {
+  return (
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden", pointerEvents: "none", zIndex: 0 }}>
+      <div style={{ position: "absolute", top: -80, left: -60, width: 380, height: 380, borderRadius: "50%", background: "radial-gradient(circle, rgba(227,167,44,0.16), transparent 70%)", filter: "blur(10px)" }} />
+      <div style={{ position: "absolute", top: 60, right: -100, width: 420, height: 420, borderRadius: "50%", background: "radial-gradient(circle, rgba(193,82,45,0.14), transparent 70%)", filter: "blur(10px)" }} />
+      <div style={{ position: "absolute", top: 220, left: "35%", width: 300, height: 300, borderRadius: "50%", background: "radial-gradient(circle, rgba(143,174,139,0.12), transparent 70%)", filter: "blur(10px)" }} />
+      <div style={{ position: "absolute", inset: 0, backgroundImage: GRAIN_BG, backgroundRepeat: "repeat", opacity: 0.05, mixBlendMode: "overlay" }} />
+    </div>
+  );
+}
+
+function Tape({ children, active, onClick, tone = "mustard" }) {
+  const toneColor = tone === "mustard" ? "#E3A72C" : tone === "brick" ? "#C1522D" : "#8FAE8B";
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        fontFamily: "'Inter', sans-serif",
+        fontSize: 13,
+        fontWeight: 500,
+        padding: "6px 14px",
+        margin: "3px",
+        border: "none",
+        cursor: "pointer",
+        color: active ? "#241C0F" : "#EDE6D2",
+        background: active ? toneColor : "rgba(255,255,255,0.08)",
+        clipPath: "polygon(2% 0%, 98% 3%, 100% 100%, 0% 97%)",
+        transition: "background 0.15s ease",
+        transform: active ? "rotate(-0.5deg)" : "none",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+export default function App() {
+  const [pantry, setPantry] = useState(new Set());
+  const [view, setView] = useState("browse");
+  const [cuisine, setCuisine] = useState("All");
+  const [diet, setDiet] = useState("All");
+  const [maxTime, setMaxTime] = useState(45);
+  const [selectedId, setSelectedId] = useState(null);
+  const [plan, setPlan] = useState(() => Object.fromEntries(DAYS.map(d => [d, null])));
+  const [checkedShop, setCheckedShop] = useState(new Set());
+  const [addingDay, setAddingDay] = useState(null);
+
+  function toggleIngredient(item) {
+    setPantry(prev => {
+      const next = new Set(prev);
+      next.has(item) ? next.delete(item) : next.add(item);
+      return next;
+    });
+  }
+
+  const filtered = useMemo(() => {
+    return ALL_RECIPES
+      .filter(r => cuisine === "All" || r.cuisine === cuisine)
+      .filter(r => diet === "All" || r.diet === diet)
+      .filter(r => r.time <= maxTime)
+      .map(r => {
+        const have = r.ingredients.filter(([name]) => pantry.has(name)).length;
+        return { ...r, have, total: r.ingredients.length };
+      })
+      .sort((a, b) => b.have / b.total - a.have / a.total);
+  }, [cuisine, diet, maxTime, pantry]);
+
+  const selected = ALL_RECIPES.find(r => r.id === selectedId);
+
+  const plannedRecipes = DAYS.map(d => ({ day: d, recipe: ALL_RECIPES.find(r => r.id === plan[d]) || null }));
+  const shoppingList = useMemo(() => {
+    const map = new Map();
+    plannedRecipes.forEach(({ recipe }) => {
+      if (!recipe) return;
+      recipe.ingredients.forEach(([name, amount]) => {
+        if (!map.has(name)) map.set(name, []);
+        map.get(name).push(amount);
+      });
+    });
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [plan]);
+
+  function addToDay(day, recipeId) {
+    setPlan(prev => ({ ...prev, [day]: recipeId }));
+    setAddingDay(null);
+  }
+
+  const cardStyle = {
+    background: "#FAF6EC",
+    borderRadius: 3,
+    padding: "16px 18px",
+    color: "#2A2317",
+    position: "relative",
+    boxShadow: "0 3px 0 rgba(0,0,0,0.15)",
+  };
+
+  return (
+    <div style={{ fontFamily: "'Inter', sans-serif", background: "#223028", minHeight: "100vh", padding: "0 0 60px", position: "relative" }}>
+      <style>{FONTS}</style>
+      <BackgroundArt />
+
+      <div style={{ maxWidth: 880, margin: "0 auto", padding: "40px 24px 0", position: "relative", zIndex: 1 }}>
+        <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#8FAE8B", letterSpacing: 1, margin: "0 0 6px" }}>
+          what's in the kitchen
+        </p>
+        <h1 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 42, color: "#F2ECDD", margin: "0 0 8px", lineHeight: 1.1 }}>
+          Kitchen Match
+        </h1>
+        <p style={{ color: "#C9C2AC", fontSize: 15, margin: "0 0 28px", maxWidth: 480 }}>
+          Tap what you've got. We'll find recipes that use it, then help you plan the week and build a shopping list for the rest.
+        </p>
+
+        <div style={{ display: "flex", gap: 8, marginBottom: 32, borderBottom: "1px solid rgba(255,255,255,0.12)" }}>
+          {[["browse", "Browse recipes"], ["plan", "This week's plan"], ["shopping", "Shopping list"]].map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setView(key)}
+              style={{
+                fontFamily: "'Inter', sans-serif",
+                fontSize: 14,
+                fontWeight: 500,
+                padding: "10px 4px",
+                marginRight: 20,
+                background: "none",
+                border: "none",
+                borderBottom: view === key ? "2px solid #E3A72C" : "2px solid transparent",
+                color: view === key ? "#F2ECDD" : "#8B8570",
+                cursor: "pointer",
+              }}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {view === "browse" && !selected && (
+        <div style={{ maxWidth: 880, margin: "0 auto", padding: "0 24px", position: "relative", zIndex: 1 }}>
+          <div style={{ marginBottom: 20 }}>
+            {INGREDIENT_GROUPS.map(group => (
+              <div key={group.label} style={{ marginBottom: 10 }}>
+                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: "#7C9473", margin: "0 0 4px", letterSpacing: 0.5 }}>
+                  {group.label.toUpperCase()}
+                </p>
+                <div style={{ display: "flex", flexWrap: "wrap" }}>
+                  {group.items.map(item => (
+                    <Tape key={item} active={pantry.has(item)} onClick={() => toggleIngredient(item)}>
+                      {withIndianName(item)}
+                    </Tape>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap", padding: "14px 0", borderTop: "1px solid rgba(255,255,255,0.1)", borderBottom: "1px solid rgba(255,255,255,0.1)", marginBottom: 24 }}>
+            <label style={{ color: "#C9C2AC", fontSize: 13 }}>
+              Cuisine{" "}
+              <select value={cuisine} onChange={e => setCuisine(e.target.value)} style={{ marginLeft: 6, padding: "4px 6px", fontFamily: "'Inter', sans-serif" }}>
+                {CUISINES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </label>
+            <label style={{ color: "#C9C2AC", fontSize: 13 }}>
+              Diet{" "}
+              <select value={diet} onChange={e => setDiet(e.target.value)} style={{ marginLeft: 6, padding: "4px 6px", fontFamily: "'Inter', sans-serif" }}>
+                {DIETS.map(d => <option key={d} value={d}>{d === "none" ? "Any" : d}</option>)}
+              </select>
+            </label>
+            <label style={{ color: "#C9C2AC", fontSize: 13, display: "flex", alignItems: "center", gap: 8 }}>
+              Under {maxTime} min
+              <input type="range" min={10} max={60} step={5} value={maxTime} onChange={e => setMaxTime(Number(e.target.value))} />
+            </label>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: 16 }}>
+            {filtered.map(r => (
+              <div key={r.id} style={{ ...cardStyle, cursor: "pointer" }} onClick={() => setSelectedId(r.id)}>
+                <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
+                  <DishIcon type={DISH_TYPE_BY_ID[r.id]} size={52} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: "#8B8570", margin: "0 0 6px" }}>
+                      {r.cuisine} · {r.time} min
+                    </p>
+                    <h3 style={{ fontFamily: "'Fraunces', serif", fontWeight: 500, fontSize: 19, margin: "0 0 10px", lineHeight: 1.2 }}>
+                      {r.name}
+                    </h3>
+                  </div>
+                </div>
+                <div style={{
+                  display: "inline-block", fontSize: 12, fontWeight: 500, padding: "3px 8px", borderRadius: 2,
+                  background: r.have === r.total ? "#8FAE8B" : r.have > 0 ? "#E3A72C" : "rgba(0,0,0,0.06)",
+                  color: r.have > 0 ? "#241C0F" : "#8B8570",
+                }}>
+                  {r.have}/{r.total} ingredients you have
+                </div>
+              </div>
+            ))}
+            {filtered.length === 0 && (
+              <p style={{ color: "#C9C2AC", gridColumn: "1/-1" }}>No recipes match those filters. Try widening the time or diet.</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {view === "browse" && selected && (
+        <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 24px", position: "relative", zIndex: 1 }}>
+          <button onClick={() => setSelectedId(null)} style={{ background: "none", border: "none", color: "#8FAE8B", fontSize: 13, cursor: "pointer", padding: 0, marginBottom: 16 }}>
+            ← Back to recipes
+          </button>
+          <div style={cardStyle}>
+            <div style={{ display: "flex", alignItems: "flex-start", gap: 16, marginBottom: 4 }}>
+              <DishIcon type={DISH_TYPE_BY_ID[selected.id]} size={72} />
+              <div>
+                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: "#8B8570", margin: "0 0 6px" }}>
+                  {selected.cuisine} · {selected.meal} · {selected.time} min
+                </p>
+                <h2 style={{ fontFamily: "'Fraunces', serif", fontWeight: 600, fontSize: 26, margin: "0 0 4px" }}>
+                  {selected.name}
+                </h2>
+              </div>
+            </div>
+            <div style={{ marginTop: 14 }}>
+
+            <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: "#7C9473", margin: "0 0 8px", letterSpacing: 0.5 }}>INGREDIENTS</p>
+            <ul style={{ margin: "0 0 20px", paddingLeft: 18, fontSize: 14, lineHeight: 1.9 }}>
+              {selected.ingredients.map(([name, amount]) => (
+                <li key={name} style={{ color: pantry.has(name) ? "#2A2317" : "#8B8570" }}>
+                  <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontWeight: 500 }}>{amount}</span> {withIndianName(name)}
+                  {pantry.has(name) && <span style={{ color: "#5B7553", marginLeft: 6 }}>· have it</span>}
+                </li>
+              ))}
+            </ul>
+
+            <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: "#7C9473", margin: "0 0 8px", letterSpacing: 0.5 }}>STEPS</p>
+            <ol style={{ margin: "0 0 24px", paddingLeft: 18, fontSize: 14, lineHeight: 1.9 }}>
+              {selected.steps.map((s, i) => <li key={i}>{s}</li>)}
+            </ol>
+
+            {addingDay !== selected.id ? (
+              <button onClick={() => setAddingDay(selected.id)} style={{ fontFamily: "'Inter', sans-serif", fontWeight: 500, fontSize: 14, padding: "10px 18px", background: "#E3A72C", border: "none", borderRadius: 2, cursor: "pointer" }}>
+                Add to weekly plan
+              </button>
+            ) : (
+              <div>
+                <p style={{ fontSize: 13, color: "#8B8570", margin: "0 0 8px" }}>Which day?</p>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                  {DAYS.map(d => (
+                    <button key={d} onClick={() => addToDay(d, selected.id)} style={{ fontFamily: "'Inter', sans-serif", fontSize: 13, padding: "6px 12px", background: "#EDE6D2", border: "1px solid #D8CFAF", borderRadius: 2, cursor: "pointer" }}>
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {view === "plan" && (
+        <div style={{ maxWidth: 880, margin: "0 auto", padding: "0 24px", position: "relative", zIndex: 1 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 14 }}>
+            {plannedRecipes.map(({ day, recipe }) => (
+              <div key={day} style={{ ...cardStyle, minHeight: 110 }}>
+                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 11, color: "#7C9473", margin: "0 0 10px", letterSpacing: 0.5 }}>
+                  {day.toUpperCase()}
+                </p>
+                {recipe ? (
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10 }}>
+                      <DishIcon type={DISH_TYPE_BY_ID[recipe.id]} size={36} />
+                      <p style={{ fontFamily: "'Fraunces', serif", fontSize: 16, fontWeight: 500, margin: 0 }}>{recipe.name}</p>
+                    </div>
+                    <button onClick={() => setPlan(p => ({ ...p, [day]: null }))} style={{ background: "none", border: "none", color: "#C1522D", fontSize: 12, cursor: "pointer", padding: 0 }}>
+                      Remove
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={() => { setView("browse"); setSelectedId(null); }} style={{ background: "none", border: "none", color: "#8B8570", fontSize: 13, cursor: "pointer", padding: 0 }}>
+                    + Pick a recipe
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {view === "shopping" && (
+        <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 24px", position: "relative", zIndex: 1 }}>
+          <div style={cardStyle}>
+            {shoppingList.length === 0 ? (
+              <p style={{ color: "#8B8570", fontSize: 14 }}>Add recipes to your weekly plan and your shopping list builds itself.</p>
+            ) : (
+              <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+                {shoppingList.map(([name, amounts]) => {
+                  const checked = checkedShop.has(name);
+                  return (
+                    <li key={name} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: "1px solid #EAE3CC" }}>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => setCheckedShop(prev => {
+                          const next = new Set(prev);
+                          checked ? next.delete(name) : next.add(name);
+                          return next;
+                        })}
+                      />
+                      <span style={{ flex: 1, fontSize: 14, textDecoration: checked ? "line-through" : "none", color: checked ? "#B5AC8F" : "#2A2317" }}>
+                        {name}
+                      </span>
+                      <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: 12, color: "#8B8570" }}>
+                        {amounts.join(", ")}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
